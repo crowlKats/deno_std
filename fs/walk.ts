@@ -130,8 +130,9 @@ export async function* walk(
       let { isSymlink, isDirectory } = entry;
 
       if (isSymlink) {
-        if (!followSymlinks) continue;
-        path = await Deno.realPath(path);
+        if (followSymlinks) {
+          path = await Deno.realPath(path);
+        }
         // Caveat emptor: don't assume |path| is not a symlink. realpath()
         // resolves symlinks but another process can replace the file system
         // entity with a different type of entity before we call lstat().
@@ -192,8 +193,9 @@ export function* walkSync(
     let { isSymlink, isDirectory } = entry;
 
     if (isSymlink) {
-      if (!followSymlinks) continue;
-      path = Deno.realPathSync(path);
+      if (followSymlinks) {
+        path = Deno.realPathSync(path);
+      }
       // Caveat emptor: don't assume |path| is not a symlink. realpath()
       // resolves symlinks but another process can replace the file system
       // entity with a different type of entity before we call lstat().
