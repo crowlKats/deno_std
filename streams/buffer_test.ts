@@ -15,6 +15,7 @@ Deno.test("[streams] Buffer Write & Read", async function () {
 
 Deno.test("[streams] Buffer Read empty", async function () {
   const buf = new Buffer();
+  await buf.writable.close()
   const reader = buf.readable.getReader({ mode: "byob" });
   const read = await reader.read(new Uint8Array(5));
   assert(read.done);

@@ -26,15 +26,20 @@ export class Buffer {
   #off = 0; // read at buf[off], write at buf[buf.byteLength]
   #startedPromise = Promise.withResolvers();
   #startedBool = false;
+  #closedOrWrittenPromise = Promise.withResolvers();
+  #closedBool = false;
   #readable: ReadableStream<Uint8Array> = new ReadableStream({
     type: "bytes",
     pull: async (controller) => {
-      if (!this.#startedBool) {
+      if (!this.#startedBool && !this.#closedBool) {
         await this.#startedPromise.promise;
         this.#startedBool = true;
       }
 
       const view = new Uint8Array(controller.byobRequest!.view!.buffer);
+      if (this.empty() && !this.#closedBool) {
+        await this.#closedOrWrittenPromise.promise;
+      }
       if (this.empty()) {
         // Buffer is empty, reset to recover space.
         this.reset();
@@ -47,6 +52,7 @@ export class Buffer {
       if (nread !== 0) {
         controller.byobRequest!.respond(nread);
       }
+      this.#closedOrWrittenPromise = Promise.withResolvers()
     },
     autoAllocateChunkSize: DEFAULT_CHUNK_SIZE,
   });
@@ -61,7 +67,12 @@ export class Buffer {
       const m = this.#grow(chunk.byteLength);
       copy(chunk, this.#buf, m);
       this.#startedPromise.resolve(undefined);
+      this.#closedOrWrittenPromise.resolve(undefined)
     },
+    close: () => {
+      this.#closedOrWrittenPromise.resolve(undefined);
+      this.#closedBool = true
+    }
   });
 
   /** Getter returning the instance's {@linkcode WritableStream}. */
